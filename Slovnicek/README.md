@@ -59,14 +59,9 @@ pong
 
 ## Přístup z jiného zařízení (např. mobil)
 zjisti IP adresu počítače:
+
 ipconfig
 
-např.:
-
-IPv4 Address: 10.0.0.18
-otevři na mobilu:
-http://10.0.0.18:8081/ping
-pokud to nefunguje:
 
 povol firewall:
 netsh advfirewall firewall add rule name="MojeAPI" dir=in action=allow protocol=TCP localport=8081

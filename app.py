@@ -5,7 +5,6 @@ from datetime import datetime
 from database import init_db
 import os
 
-# ✅ TOTO TI CHYBĚLO
 app = Flask(__name__)
 
 DB_PATH = os.getenv("DB_PATH", "/app/data/slovnicek.db")
@@ -38,7 +37,7 @@ def status():
             "autor": "dmytroshevaha",
             "cas": datetime.now().isoformat(),
             "pocet_pojmu": count,
-            "ai_model": "gemma3:27b"
+            "ai_model": "gpt-4o-mini" # Změněno na standardní OpenAI model pro cloud
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -61,24 +60,44 @@ def ai():
     if not pojem:
         return jsonify({"response": "Nebyl zadán žádný dotaz."}), 400
 
+    # Načtení klíčů ze serveru (podle zadání z obrázku 1)
+    api_key = os.environ.get("OPENAI_API_KEY")
+    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1") # Fallback na orig OpenAI
+
+    if not api_key:
+        return jsonify({"response": "Chyba: Na serveru není nastaven OPENAI_API_KEY."}), 500
+
     try:
-        response = requests.post(
-            "http://host.docker.internal:11434/api/generate",
-            json={
-                "model": "gemma3:27b",
-                "prompt": f"Vysvětli jednou krátkou větou v češtině, co je: {pojem}",
-                "stream": False
-            },
-            timeout=45
-        )
+        # Přepsáno na standardní OpenAI API formát, který ten tvůj server vyžaduje
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "model": "gpt-4o-mini", # Případně "gpt-3.5-turbo", záleží co ten proxy server v Kuřimi podporuje
+            "messages": [
+                {"role": "user", "content": f"Vysvětli jednou krátkou větou v češtině, co je: {pojem}"}
+            ],
+            "temperature": 0.7
+        }
+
+        # URL poskládáme tak, aby to šlo na endpoint /chat/completions
+        url = f"{base_url.rstrip('/')}/chat/completions"
+
+        response = requests.post(url, headers=headers, json=payload, timeout=45)
         response.raise_for_status()
-        odpoved = response.json().get("response", "Nepodařilo se získat odpověď.")
-    except requests.exceptions.ConnectionError:
-        odpoved = "Chyba: Nelze se spojit s Ollamou."
+        
+        # Vytáhnutí odpovědi z OpenAI formátu
+        vysledek = response.json()
+        odpoved = vysledek["choices"][0]["message"]["content"]
+
     except Exception as e:
         odpoved = f"Chyba při komunikaci s AI: {str(e)}"
 
     return jsonify({"response": odpoved})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8081)
+    # 🌟 OPRAVA PORTU PRO SERVER 🌟
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

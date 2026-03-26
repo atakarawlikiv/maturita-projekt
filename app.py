@@ -38,7 +38,7 @@ def status():
             "autor": "dmytroshevaha",
             "cas": datetime.now().isoformat(),
             "pocet_pojmu": count,
-            "ai_model": "gemma3:4b"
+            "ai_model": "gemma3:27b"
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -65,7 +65,7 @@ def ai():
         response = requests.post(
             "http://host.docker.internal:11434/api/generate",
             json={
-                "model": "gemma3:4b",
+                "model": "gemma3:27b",
                 "prompt": f"Vysvětli jednou krátkou větou v češtině, co je: {pojem}",
                 "stream": False
             },
